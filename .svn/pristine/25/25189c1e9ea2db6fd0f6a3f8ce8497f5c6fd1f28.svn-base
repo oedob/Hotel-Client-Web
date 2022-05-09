@@ -1,0 +1,264 @@
+<template>
+  <div class="dingdan">
+    <div class="title">
+      <div class="title_text">待处理订单</div>
+      <el-button type="text" class="more" v-on:click="seeMore()">查看全部></el-button>
+    </div>
+    <ul>
+      <li :class="order.st?'dingdan_list_a':'dingdan_list_b'" v-for="order in orderList">
+        <table>
+          <tr>
+            <td>{{order.hotelGoods.goodsName}}</td>
+            <td>{{order.goodsNum}}间</td>
+            <td>{{order.checkinPerson}}</td>
+          </tr>
+          <tr>
+            <td>{{order.comeTime}}至{{order.leaveTime}}</td>
+            <td>{{order.night}}晚</td>
+            <td>18：00到店</td>
+          </tr>
+        </table>
+        <div class="dingdan_leibie">
+          <div class="leibie">自营</div>
+          <div class="jiage" v-show="order.payState !== 0">已付￥<big>{{order.actualMoney}}</big></div>
+        </div>
+        <div class="xiangqing_box">
+          <el-button type="text" v-on:click="checkDetail(order.orderId)">查看详情</el-button>
+          <div class="chuli" v-show="order.orderState === 101">
+            <el-button type="info" @click="refuse(order.orderState, order.orderId)">拒单</el-button>
+          </div>
+          <div class="chuli" v-show="order.orderState === 201">
+            <el-button type="info" @click="refuse(order.orderState, order.orderId)">拒单</el-button>
+            <el-button type="primary" @click="confirmCheckIn(order.orderId)">确认入住</el-button>
+          </div>
+          <div class="chuli" v-show="order.orderState === 302 || order.orderState === 303 || order.orderState === 304">
+            <el-button type="primary" @click="confirmRefund(order.orderId)">确认退款</el-button>
+          </div>
+          <div class="chuli" v-show="order.payState === 1003">
+            <el-button type="danger" @click="confirmRefund(order.orderId)">重新退款</el-button>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</template>
+<script>
+  import {
+    susOrder,
+    confirmCome,
+    hotelCancel,
+    refund
+  } from '@/api/getData'
+  import { formatDate } from '@/config/mUtils'
+  export default {
+    data () {
+      return {
+        order: {},
+        orderList: []
+      }
+    },
+    created () {
+      this.init()
+    },
+    methods: {
+      init () {
+        let shopId = this.$store.state.hotelId
+        this.getOrderList(shopId)
+      },
+      getOrderList (shopId) {
+        susOrder(shopId).then((res) => {
+          if (res.data.state === 1) {
+            console.log(res.data.data)
+            this.orderList = res.data.data
+            for (let x in this.orderList) {
+              this.orderList[x].night = Math.floor((this.orderList[x].leaveTime - this.orderList[x].comeTime) / 86400000)
+              this.orderList[x].comeTime = formatDate(this.orderList[x].comeTime, 'MM月DD日')
+              this.orderList[x].leaveTime = formatDate(this.orderList[x].leaveTime, 'MM月DD日')
+              if (this.orderList[x].orderState === 101 || this.orderList[x].orderState === 201) {
+                this.orderList[x].st = true
+              } else {
+                this.orderList[x].st = false
+              }
+            }
+          }
+        })
+      },
+      refuse (orderState, id) {
+        let handleMan = this.$store.state.user.nickName
+        if (orderState === 101) {
+          hotelCancel(id, handleMan).then((res) => {
+            if (res.data.state === 1) {
+              this.$message({
+                type: 'success',
+                message: '拒单成功'
+              })
+              this.getOrderList(this.$store.state.hotelId)
+            } else {
+              this.$message({
+                type: 'error',
+                message: '拒单失败'
+              })
+            }
+          })
+        } else if (orderState === 201) {
+          hotelCancel(id, handleMan).then((res) => {
+            if (res.data.state === 1) {
+              this.$message({
+                type: 'success',
+                message: '拒单成功'
+              })
+              this.getOrderList(this.$store.state.hotelId)
+            } else {
+              this.$message({
+                type: 'error',
+                message: '拒单失败'
+              })
+            }
+          })
+        }
+      },
+      confirmCheckIn (id) {
+        let handleMan = this.$store.state.user.nickName
+        confirmCome(id, handleMan).then((res) => {
+          if (res.data.state === 1) {
+            this.$message({
+              type: 'success',
+              message: '入住成功'
+            })
+            this.getOrderList(this.$store.state.hotelId)
+          } else {
+            this.$message({
+              type: 'success',
+              message: '入住失败'
+            })
+          }
+        })
+      },
+      confirmRefund (id) {
+        refund(id).then((res) => {
+          if (res.data.state === 1) {
+            this.$message({
+              type: 'success',
+              message: '退款成功'
+            })
+            this.getOrderList(this.$store.state.hotelId)
+          } else {
+            this.$message({
+              type: 'success',
+              message: '退款失败'
+            })
+          }
+        })
+      },
+      checkDetail (orderId) {
+        this.$router.push({path: 'orderDetail', query: {orderId}})
+      },
+      seeMore () {
+        this.$router.push({path: 'orderList', query: {}})
+      }
+    }
+  }
+</script>
+<style scoped>
+  .dingdan {
+    width: 460px;
+    padding: 0 35px 60px 35px;
+    background-color: #fff;
+  }
+
+  .dingdan .dingdan_list_a {
+    height: 215px;
+    margin-bottom: 22px;
+    padding: 0 26px;
+  }
+
+  .dingdan .dingdan_list_b {
+    height: 215px;
+    margin-bottom: 22px;
+    padding: 0 26px;
+  }
+
+  .dingdan .dingdan_list_a {
+    background-color: #F2F9FF;
+    border: 1px solid #82D0F4;
+  }
+
+  .dingdan .dingdan_list_b {
+    background-color: #FFE3E3;
+    border: 1px solid #ff0000;
+  }
+
+  .dingdan .title {
+    height: 60px;
+    line-height: 60px;
+  }
+
+  .dingdan .title .title_text {
+    float: left;
+    font-size: 24px;
+  }
+
+  .dingdan .title .more {
+    float: right;
+    font-size: 16px;
+    color: #00bad6;
+  }
+
+  td {
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .dingdan .dingdan_leibie {
+    height: 40px;
+    line-height: 40px;
+  }
+
+  .dingdan .dingdan_leibie .leibie {
+    float: left;
+    width: 45px;
+    height: 20px;
+    margin-top: 10px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 3px;
+  }
+
+  .dingdan .dingdan_list_a .leibie {
+    color: #3797db;
+    border: 1px solid #3797db;
+  }
+
+  .dingdan .dingdan_list_b .leibie {
+    color: #3797db;
+    border: 1px solid #3797db;
+  }
+
+  .dingdan .dingdan_leibie .jiage {
+    float: right;
+    font-size: 16px;
+    color: #ff0000;
+  }
+
+  .dingdan .xiangqing_box {
+    height: 79px;
+    line-height: 79px;
+  }
+
+  .dingdan .dingdan_list_a .xiangqing_box {
+    border-top: 1px solid #7ecef4;
+  }
+
+  .dingdan .dingdan_list_b .xiangqing_box {
+    border-top: 1px solid #fdb9b9;
+  }
+
+  .dingdan .xiangqing_box .xiangqing {
+    float: left;
+    color: #3797db;
+  }
+
+  .dingdan .xiangqing_box .chuli {
+    float: right;
+  }
+</style>

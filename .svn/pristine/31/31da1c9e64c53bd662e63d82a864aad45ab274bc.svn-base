@@ -1,0 +1,94 @@
+<template>
+  <el-button :class="{'code-btn-disabled': isDisabled}" v-on:click="_identifyCode"
+             :disabled="isDisabled">
+    {{isDisabled ? '' : codeText}}{{isDisabled ? '(' + countDown + ')s后重试' : ''}}
+  </el-button>
+</template>
+
+<script>
+  import { identifyCode, sendLoginCode, sendUpdatePasswordCode } from '@/api/getData'
+
+  export default {
+    props: {
+      phoneNum: {
+        type: String,
+        required: true
+      },
+      isCodeRegister: {
+        type: Boolean,
+        default: false
+      },
+      isCodeDeynamicLogin: {
+        type: Boolean,
+        default: false
+      },
+      isCodeRepassword: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data () {
+      return {
+        codeText: '获取验证码',
+        isDisabled: false,
+        countDown: 60
+      }
+    },
+    methods: {
+      _identifyCode () {
+        if (!this.phoneNum) {
+          return
+        }
+        this.isDisabled = true
+        let $this = this
+        let time = setInterval(function () {
+          if ($this.countDown > 0) {
+            $this.countDown--
+          } else {
+            $this.isDisabled = false
+            $this.countDown = 60
+            clearInterval(time)
+          }
+        }, 1000)
+        if (this.isCodeRegister) {
+          identifyCode(this.phoneNum).then(res => {
+            if (res.data.msg === 'error') {
+              this.$message({
+                type: 'error',
+                message: res.data.message
+              })
+            }
+          })
+        } else if (this.isCodeDeynamicLogin) {
+          sendLoginCode(this.phoneNum).then(res => {
+            if (res.data.msg === 'notregiste') {
+              this.$message({
+                type: 'error',
+                message: res.data.message
+              })
+            }
+          })
+        } else if (this.isCodeRepassword) {
+          sendUpdatePasswordCode(this.phoneNum).then(res => {
+            if (res.data.msg === 'error') {
+              this.$message({
+                type: 'error',
+                message: res.data.message
+              })
+            }
+          })
+        } else {
+          throw new Error('未指定方式')
+        }
+      }
+    }
+  }
+</script>
+
+<style lang="less">
+  @import "../../style/mixin.less";
+
+  .code-btn-disabled {
+    background-color: #e5e5e5 !important;
+  }
+</style>

@@ -1,0 +1,801 @@
+<template>
+  <div class="base-info">
+    <header>酒店基本信息<span class="text">(<span>*</span>此为必填项)</span></header>
+    <el-row>
+      <el-form :model="hotel" :rules="rules" ref="hotel" label-width="150px">
+        <el-row>
+          <el-col :span="12">
+            <el-form-item prop="name" label="酒店名称">
+              <el-input v-model="hotel.name"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item prop="receptionPhone" label="前台咨询电话">
+              <el-input v-model="hotel.receptionPhone"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="20">
+              <el-row>
+                <el-form-item label="酒店地址" required>
+                  <el-col :span="7">
+                    <el-form-item prop="provinceId">
+                      <el-select v-model="hotel.provinceName" placeholder="请选择省份" @change='setCityList' filterable>
+                        <el-option
+                          v-for="item in provinceList"
+                          :key="item.provinceId"
+                          :label="item.provinceName"
+                          :value="item.provinceId">
+                        </el-option>
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="5">
+                    <el-form-item prop="cityId">
+                      <el-select v-model="hotel.cityName" placeholder="请选择市" @change='setAreaList'>
+                        <el-option
+                          v-for="item in cityList"
+                          :key="item.cityId"
+                          :label="item.cityName"
+                          :value="item.cityId">
+                        </el-option>
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="5">
+                    <el-form-item prop="areaId">
+                      <el-select v-model="hotel.areaName" placeholder="请选择区县"
+                      @change='getArea'>
+                        <el-option
+                          v-for="item in areaList"
+                          :key="item.areaId"
+                          :label="item.areaName"
+                          :value="item.areaId">
+                        </el-option>
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="6">
+                    <el-form-item prop="address">
+                      <el-input v-model="hotel.address" placeholder="如：XXX路XX号（XX对面）"></el-input>
+                    </el-form-item>
+                  </el-col>
+                </el-form-item>
+              </el-row>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="5">
+            <el-form-item prop="lat" label="经纬度" :readonly=true>
+              <el-input v-model="hotel.lat" :readonly=true></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="2">
+            <el-input v-model="hotel.lon" :readonly=true></el-input>
+          </el-col>
+          <el-col :span="3">
+            <el-button type="primary" @click="showAmapDialog" plain>定位</el-button>
+          </el-col>
+        </el-row>
+        <el-dialog
+          title="定位"
+          :visible.sync="mapdialogVisible"
+          width="30%">
+          <mapItem :address="address" :lat="hotel.lat" :lng="hotel.lon" v-on:sentPosition="getPosition" v-on:cancel="cancelPosi"></mapItem>
+          <span slot="footer" class="dialog-footer">
+            <!-- <el-button @click="mapdialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="mapdialogVisible = false">确 定</el-button> -->
+          </span>
+        </el-dialog>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item prop="starLevel" label="酒店星级">
+              <el-radio-group v-model="hotel.starLevel">
+                <el-radio :label="'2'">二星及以下</el-radio>
+                <el-radio :label="'3'">三星级</el-radio>
+                <el-radio :label="'4'">四星级</el-radio>
+                <el-radio :label="'5'">五星级</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="服务设施" prop="hotelServe">
+              <span>{{facilitiesStr}}</span><br>
+              <span>{{serviceStr}}</span><br>
+              <el-button type="primary" @click="showHotelServeDialog" plain>修改服务设施</el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item prop="roomNumber" label="客房总数">
+              <el-input v-model.number="hotel.roomNumber"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="连锁品牌名称">
+              <el-input v-model="hotel.chainBrand"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="开业时间">
+              <el-date-picker v-model="hotel.openTime" :editable="false" type="date" :picker-options="pickerOptions"
+                              placeholder="选择日期">
+              </el-date-picker>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="最后装修时间">
+              <el-date-picker v-model="hotel.renovationDate" :editable="false" type="date"
+                              :picker-options="pickerOptions" placeholder="选择日期">
+              </el-date-picker>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+    </el-row>
+    <el-row>
+      <el-col>
+        <button class="submit" @click="submitHotel('hotel')" v-show="!nextFlag">提交</button>
+        <button class="submit" @click="nextStep" v-show="nextFlag">下一步,添加房型规格</button>
+      </el-col>
+    </el-row>
+    <el-dialog title="酒店服务设施" :visible.sync="dialogTableVisible">
+      <el-form :model="hotelServe" ref="hotelServe" label-width="90px">
+        <header class="server-header">基础设施</header>
+        <el-row :gutter="2" type="flex" justify="space-between">
+          <el-col :span="11">
+            <el-form-item label="停车场">
+              <el-radio-group v-model="hotelServe.park">
+                <el-radio :label="1">免费</el-radio>
+                <el-radio :label="2">收费</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="11">
+            <el-form-item label="电梯">
+              <el-radio-group v-model="hotelServe.elevator">
+                <el-radio :label="1">全部</el-radio>
+                <el-radio :label="2">部分</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="2" type="flex" justify="space-between">
+          <el-col :span="11">
+            <el-form-item label="独立卫浴">
+              <el-radio-group v-model="hotelServe.bathroom">
+                <el-radio :label="1">全部</el-radio>
+                <el-radio :label="2">部分</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="11">
+            <el-form-item label="24小时热水">
+              <el-radio-group v-model="hotelServe.hotWater">
+                <el-radio :label="1">全部</el-radio>
+                <el-radio :label="2">部分</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="2" type="flex" justify="space-between">
+          <el-col :span="11">
+            <el-form-item label="空调">
+              <el-radio-group v-model="hotelServe.airConditioner">
+                <el-radio :label="1">全部</el-radio>
+                <el-radio :label="2">部分</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="11">
+            <el-form-item label="免费饮用水">
+              <el-radio-group v-model="hotelServe.freeDrinkingWater">
+                <el-radio :label="1">全部</el-radio>
+                <el-radio :label="2">部分</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="2" type="flex" justify="space-between">
+          <el-col :span="11">
+            <el-form-item label="免费WIFI">
+              <el-radio-group v-model="hotelServe.freeWifi">
+                <el-radio :label="1">全部</el-radio>
+                <el-radio :label="2">部分</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="11">
+            <el-form-item label="宽带上网">
+              <el-radio-group v-model="hotelServe.adsl">
+                <el-radio :label="1">全部</el-radio>
+                <el-radio :label="2">部分</el-radio>
+                <el-radio :label="0">无</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+      <header class="server-header">酒店服务</header>
+      <el-checkbox-group v-model="hotelServe.serviceList">
+        <table>
+          <tbody>
+          <tr>
+            <td v-for="(service,index) in allServiceList" v-show="index<4">
+              <el-checkbox :label="service" :key="service"></el-checkbox>
+            </td>
+          </tr>
+          <tr>
+            <td v-for="(service,index) in allServiceList" v-show="index<8 && index>=4">
+              <el-checkbox :label="service" :key="service"></el-checkbox>
+            </td>
+          </tr>
+          <tr>
+            <td v-for="(service,index) in allServiceList" v-show="index<12 && index>=8">
+              <el-checkbox :label="service" :key="service"></el-checkbox>
+            </td>
+          </tr>
+          <tr>
+            <td v-for="(service,index) in allServiceList" v-show="index<16 && index>=12">
+              <el-checkbox :label="service" :key="service"></el-checkbox>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </el-checkbox-group>
+      <el-row>
+        <el-col>
+          <button class="submit" @click="submitHotelServe()">提交</button>
+        </el-col>
+      </el-row>
+    </el-dialog>
+    <!-- <el-dialog title="酒店定位" width="60%" :visible.sync="dialogLocationVisible"> -->
+      <!-- <el-form :model="hotel" :rules="rules" label-width="80px">
+        <el-row>
+          <el-form-item label="酒店地址">
+            <el-col :span="7">
+              <el-select v-model="provinceId" placeholder="请选择省份" @change='setCityList' filterable>
+                <el-option
+                  v-for="item in provinceList"
+                  :key="item.provinceId"
+                  :label="item.provinceName"
+                  :value="item.provinceId">
+                </el-option>
+              </el-select>
+            </el-col>
+            <el-col :span="5">
+              <el-select v-model="cityId" placeholder="请选择市" @change='setAreaList'>
+                <el-option
+                  v-for="item in cityList"
+                  :key="item.cityId"
+                  :label="item.cityName"
+                  :value="item.cityId">
+                </el-option>
+              </el-select>
+            </el-col>
+            <el-col :span="5">
+              <el-select v-model="areaId" placeholder="请选择区县">
+                <el-option
+                  v-for="item in areaList"
+                  :key="item.areaId"
+                  :label="item.areaName"
+                  :value="item.areaId">
+                </el-option>
+              </el-select>
+            </el-col>
+            <el-col :span="6">
+              <el-input v-model="shotAddress" placeholder="如：XXX路XX号（XX对面）"></el-input>
+            </el-col>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-col :span="3">
+            <el-button v-on:click="confirm" type="primary" size="medium" class="sureBtn">确定</el-button>
+          </el-col>
+          <el-col :span="3">
+            <el-button v-on:click="cancel" type="info" size="medium" class="sureBtn">取消</el-button>
+          </el-col>
+        </el-row>
+      </el-form> -->
+    <!-- </el-dialog> -->
+  </div>
+</template>
+
+<script>
+  import {
+    getHotelServeList,
+    getProvinceList,
+    getHotelById,
+    getAreaList,
+    getCityList,
+    parseHoterServe,
+    updateHotel
+  } from '@/api/getData'
+  import mapItem from '@/components/map/map'
+  import { mapMutations } from 'vuex'
+
+  export default {
+    data () {
+      let checkHotelServe = (rule, value, callback) => {
+        if (this.hotelServe) {
+          callback()
+        } else {
+          callback(new Error('请选择服务设施'))
+        }
+      }
+      return {
+        oldAddress: '',
+        // initProvince: '',
+        // initCity: '',
+        // initArea: '',
+        pickerOptions: {
+          disabledDate (time) {
+            return time.getTime() > Date.now() + 2.592e9
+          }
+        },
+        dialogTableVisible: false,
+        dialogLocationVisible: false,
+        mapdialogVisible: false,
+        flag: true,
+        hotel: {
+          id: '',
+          name: '',
+          ownerId: '',
+          contacts: '',
+          contactPhone: '',
+          contactEmail: '',
+          receptionPhone: '',
+          lat: '',
+          lon: '',
+          starLevel: '',
+          roomNumber: '',
+          chainBrand: '',
+          provinceName: '',
+          cityName: '',
+          areaName: '',
+          address: '',
+          provinceId: '',
+          cityId: '',
+          areaId: '',
+          // shotAddress: '',
+          creator: '',
+          updater: '',
+          openTime: '',
+          renovationDate: '',
+          hotelServe: {}
+        },
+        hotelServe: {
+          hotelId: '',
+          park: 0,
+          bathroom: 0,
+          airConditioner: 0,
+          freeWifi: 0,
+          elevator: 0,
+          hotWater: 0,
+          freeDrinkingWater: 0,
+          adsl: 0,
+          serviceList: [],
+          updater: ''
+        },
+        facilitiesStr: '',
+        address: '',
+        // shotAddress: '',
+        provinceId2: '',
+        cityId2: '',
+        areaId2: '',
+        provinceName: '',
+        cityName: '',
+        areaName: '',
+        provinceList: [],
+        cityList: [],
+        areaList: [],
+        serviceStr: '',
+        allServiceList: [],
+        rules: {
+          name: [
+            {required: true, message: '请输入酒店名称', trigger: 'blur'}
+          ],
+          receptionPhone: [
+            {required: true, message: '请输入前台电话', trigger: 'blur'}
+          ],
+          starLevel: [
+            {required: true, message: '请选择星级', trigger: 'change'}
+          ],
+          roomNumber: [
+            {required: true, message: '请输入房间总数', trigger: 'blur'},
+            {type: 'number', message: '房间总数必须为数字值'}
+          ],
+          provinceName: [
+            {required: true, message: '请选择省份', trigger: 'blur'}
+          ],
+          cityName: [
+            {required: true, message: '请选择市', trigger: 'blur'}
+          ],
+          areaName: [
+            {required: true, message: '请选择区县', trigger: 'blur'}
+          ],
+          // shotAddress: [
+          //   {required: true, message: '请输入街道', trigger: 'blur'}
+          // ],
+          address: [
+            {required: true, message: '请输入街道', trigger: 'blur'}
+          ],
+          lat: [
+            {required: true, message: '请输入经纬度', trigger: 'blur'}
+          ],
+          hotelServe: [
+            {required: true, validator: checkHotelServe}
+          ]
+
+        }
+      }
+    },
+    components: {
+      mapItem
+    },
+    created () {
+      this.initData()
+    },
+    computed: {
+      hotelId () {
+        return this.$store.state.hotelId
+      },
+      ownerId () {
+        return this.$store.state.user.id
+      },
+      nextFlag () {
+        return this.$store.state.count === 0
+      },
+      confProvinceName () {
+        return this.getValue(this.hotel.provinceId, this.provinceList)
+      },
+      confCityName () {
+        return this.getValue1(this.hotel.cityId, this.cityList)
+      },
+      confAreaName () {
+        return this.getValue2(this.hotel.areaName, this.areaList)
+      }
+    },
+    methods: {
+      ...mapMutations([
+        'OLD_ADDRESS',
+        'SET_HOTELID',
+        'HOTEL_NAME'
+      ]),
+      getPosition (positionLat, positionLng) {
+        this.hotel.lat = positionLat
+        this.hotel.lon = positionLng
+        this.mapdialogVisible = false
+      },
+      cancelPosi () {
+        this.mapdialogVisible = false
+      },
+      initData () {
+        let id = this.hotelId
+        this.updater = this.$store.state.user.nickName
+        this.setHotelServeList().then(this.setProvinceList()).then(() => {
+          if (id) {
+            getHotelById(id, '1').then((res) => {
+              if (res.data.state === 1) {
+                this.hotel = res.data.data.hotel
+                // console.log(this.hotel)
+                this.oldAddress = this.hotel.provinceName + this.hotel.cityName + this.hotel.address
+                this.OLD_ADDRESS(this.oldAddress)
+                // console.log(this.oldAddress)
+                this.hotel.provinceId = this.hotel.cityId.substring(0, 2) + '0000'
+                this.hotelServe = res.data.data.hotelServe
+                let hs = res.data.data.hotelServe
+                this.facilitiesStr = hs.parkStr + ' ' + hs.bathroomStr + ' ' + hs.freeWifiStr + ' ' + hs.elevatorStr + ' ' + hs.adslStr + ' ' + hs.freeDrinkingWaterStr + ' ' + hs.hotWaterStr + ' ' + hs.airConditionerStr
+                this.serviceStr = this.hotelServe.serviceList.join(' ')
+                delete this.hotelServe.createDate
+                delete this.hotelServe.updateDate
+                delete this.hotel.createDate
+                delete this.hotel.updateDate
+              } else {
+                this.$message({
+                  type: 'error',
+                  message: res.data.message
+                })
+              }
+            })
+          }
+        }).catch(e => console.log(e))
+      },
+      showAmapDialog () {
+        this.mapdialogVisible = true
+        let confProvinceName = this.confProvinceName || this.hotel.provinceName
+        let confCityName = this.confCityName || this.hotel.cityName
+        let confAreaName = this.confAreaName || this.hotel.areaName
+        this.address = confProvinceName + confCityName + confAreaName + this.hotel.address
+        // this.address = this.hotel.provinceName + this.hotel.cityName + this.hotel.areaName + this.hotel.address
+        // console.log(this.confProvinceName)
+        // console.log(this.confCityName)
+        // console.log('定位地址：' + this.address)
+      },
+      showHotelServeDialog () {
+        this.dialogTableVisible = true
+      },
+      showLocationDialog () {
+        this.dialogLocationVisible = true
+      },
+      submitHotelServe () {
+        this.dialogTableVisible = false
+        parseHoterServe(this.hotelServe).then((res) => {
+          if (res.data.state === 1) {
+            this.facilitiesStr = res.data.data.facilityList.join(' ')
+            this.serviceStr = res.data.data.serviceList.join(' ')
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.msg
+            })
+          }
+        })
+      },
+      submitHotel (formName) {
+        this.$refs[formName].validate((valid) => {
+          if (valid) {
+            // this.hotel.cityId = this.hotel.provinceId
+            // this.hotel.areaId = this.hotel.areaId
+            if (this.hotel.openTime) {
+              this.hotel.openTimeLong = Date.parse(this.hotel.openTime)
+              if (isNaN(this.hotel.openTimeLong)) {
+                this.hotel.openTimeLong = this.hotel.openTime
+              }
+            }
+            if (this.hotel.renovationDate) {
+              this.hotel.renovationDateLong = Date.parse(this.hotel.renovationDate)
+              if (isNaN(this.hotel.renovationDateLong)) {
+                this.hotel.renovationDateLong = this.hotel.renovationDate
+              }
+            }
+            delete this.hotel.openTime
+            delete this.hotel.renovationDate
+            this.hotel.hotelServe = this.hotelServe
+            this.hotel.ownerId = this.ownerId
+            // console.log(this.hotel)
+            updateHotel(this.hotel).then((res) => {
+              if (res.data.state === 1) {
+                this.$message({
+                  type: 'success',
+                  message: res.data.msg
+                })
+                this.SET_HOTELID(res.data.data)
+                this.HOTEL_NAME(this.hotel.name)
+                this.$router.push({path: '/manage/hotelInfo/roomType', query: {flag: true}})
+              } else {
+                this.$message({
+                  type: 'error',
+                  message: res.data.msg
+                })
+              }
+            }).catch(e => console.log(e))
+          } else {
+            this.$notify.error({
+              title: '错误',
+              message: '请完善表单',
+              duration: 1000,
+              position: 'bottom-right'
+            })
+          }
+        })
+      },
+      fmtDate (obj) {
+        var date = new Date(obj)
+        var y = date.getFullYear()
+        var m = date.getMonth() + 1
+        m = m < 10 ? ('0' + m) : m
+        var d = date.getDate()
+        d = d < 10 ? ('0' + d) : d
+        return y + '-' + m + '-' + d
+      },
+      async setHotelServeList () {
+        await getHotelServeList().then((res) => {
+          if (res.data.state === 1) {
+            this.allServiceList = res.data.data.serviceList
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.msg
+            })
+          }
+        })
+      },
+      async setProvinceList () {
+        await getProvinceList().then((res) => {
+          if (res.data.state === 1) {
+            this.provinceList = res.data.data
+            // console.log(this.provinceList)
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.msg
+            })
+          }
+        })
+      },
+      setCityList (val) {
+        this.hotel.provinceId = val
+        this.hotel.provinceName = this.confProvinceName
+        // console.log('省份ID：' + this.hotel.provinceId)
+        // console.log('省份：' + this.hotel.provinceName)
+        // this.hotel.cityId = ''
+        // this.hotel.areaId = ''
+        getCityList(this.hotel.provinceId).then((res) => {
+          if (res.data.state === 1) {
+            this.cityList = res.data.data
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.msg
+            })
+          }
+        })
+      },
+      setAreaList (val) {
+        this.hotel.cityId = val
+        this.hotel.cityName = this.confCityName
+        // console.log('市ID：' + this.hotel.cityId)
+        // console.log('市：' + this.hotel.cityName)
+        // this.hotel.areaId = ''
+        getAreaList(this.hotel.cityId).then((res) => {
+          if (res.data.state === 1) {
+            this.areaList = res.data.data
+          } else {
+            this.$message({
+              type: 'error',
+              message: res.data.msg
+            })
+          }
+          return new Promise(resolve => {
+            resolve()
+          })
+        })
+      },
+      getArea (val) {
+        this.hotel.areaId = val
+        this.hotel.areaName = this.confAreaName
+        // console.log('区县ID:' + this.hotel.areaId)
+        // console.log('区县:' + this.hotel.areaName)
+      },
+      // confirm () {
+      //   let provinceName = this.getValue(this.hotel.provinceId, this.provinceList)
+      //   let cityName = this.getValue1(this.hotel.cityId, this.cityList)
+      //   let areaName = this.getValue2(this.hotel.areaId, this.areaList)
+      //   if (provinceName && cityName && areaName && this.hotel.shotAddress) {
+      //     this.hotel.address = this.getValue(this.hotel.provinceId, this.provinceList) + this.getValue1(this.hotel.cityId, this.cityList) + this.getValue2(this.hotel.areaId, this.areaList) + this.hotel.shotAddress
+      //     this.hotel.cityId = this.hotel.provinceId
+      //     this.hotel.areaId = this.hotel.areaId
+      //     this.dialogLocationVisible = false
+      //   } else {
+      //     this.$message({
+      //       type: 'error',
+      //       message: '请输入完整地址'
+      //     })
+      //   }
+      // },
+      cancel () {
+        this.dialogLocationVisible = false
+      },
+      nextStep () {
+        this.submitHotel('hotel')
+      },
+      getValue1 (key, map) {
+        for (var i in map) {
+          if (map[i].cityId === key) {
+            return map[i].cityName
+          }
+        }
+        return ''
+      },
+      getValue2 (key, map) {
+        for (var i in map) {
+          if (map[i].areaId === key) {
+            return map[i].areaName
+          }
+        }
+        return ''
+      },
+      getValue (key, map) {
+        for (var i in map) {
+          if (map[i].provinceId === key) {
+            return map[i].provinceName
+          }
+        }
+        return ''
+      }
+      // setLocation () {
+        // let provinceName = this.getValue(this.hotel.provinceId, this.provinceList)
+        // let cityName = this.getValue1(this.hotel.cityId, this.cityList)
+        // let areaName = this.getValue2(this.hotel.areaId, this.areaList)
+        // addr = provinceName + cityName + areaName + this.hotel.shotAddress
+        // this.$refs.map.parentFn(address)
+        // this.initMap(addr)
+        // if (provinceName && cityName && areaName && this.hotel.shotAddress) {
+        //   this.$refs.map.geoCode({fullAddress: address, provinceName, cityName, areaName}).then(point => {
+        //     this.hotel.lon = point.lng
+        //     this.hotel.lat = point.lat
+        //   })
+        // } else {
+        //   this.$message({
+        //     type: 'error',
+        //     message: '请输入完整地址'
+        //   })
+        // }
+      // }
+    }
+  }
+</script>
+
+<style lang="less" scoped>
+  @import "../../../style/mixin.less";
+  .geolocation-wrapper {
+      position: relative;
+      width: 100%;
+      height: 300px;
+    }
+  #container{
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+  }
+  .base-info {
+    header {
+      line-height: 50px;
+      .sc(20px, #4c4c4c);
+      span.text {
+        .sc(15px, #4c4c4c);
+        span {
+          color: red;
+        }
+      }
+    }
+    button.submit {
+      display: block;
+      margin: 0 auto;
+      margin-top: 60px;
+      border-radius: 3px;
+      width: 200px;
+      height: 40px;
+      line-height: 40px;
+      background-color: @theme-color;
+      .sc(20px, #fff);
+      text-align: center;
+    }
+    button.sureBtn {
+      display: block;
+      margin: 0 auto;
+      margin-top: 20px;
+      margin-left: 300%;
+    }
+    table {
+      width: 100%;
+      tr {
+        width: 100%;
+        .fj();
+        td {
+          width: 25%;
+        }
+      }
+    }
+  }
+</style>
